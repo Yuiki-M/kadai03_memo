@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>myMemoPad</title>
+<script src="js/jquery-2.1.3.min.js"></script>
+<link rel="stylesheet" href="css/sample.css">
+</head>
+<body>
+<header>
+<h1>食べ活ダイアリー</h1>
+</header>
+<!-- main部分のタグを最初非表示にして、後々ふんわりと表示させる -->
+<main style="display: none;">
+    <!-- 原則としてJSで動きを付け加えたい・memo pad上に記録をしていきたい場合、その記録をしていく挙動にかかわる一つひとつの要素にid名をつけていく -->
+
+    <!-- 記録する日付を選択するセレクトボックスを入れる -->
+<select id="view"></select>
+<select id="view2"></select>
+<select id="view3"></select>
+    
+    <textarea id="text_area"></textarea>
+    <ul>
+        <li id="save">記録</li>
+    </ul>
+
+    <div id="monthlyRecords"></div>
+</main>
+
+<script>
+// もともと非表示になっていたきろくボタンをふんわりと1秒(=1000)で登場させる
+$("main").fadeIn(1000);
+
+// 日付選択のセレクトボックスを挿入する
+function ymd(start,end){
+    let str="";
+    for(let i=start; i<end; i++){
+        str += `<option>${i}</option>`
+    }
+    return str;
+}
+
+$("#view").html(ymd(2020, 2030));
+$("#view2").html(ymd(1, 13));
+$("#view3").html(ymd(1, 32));
+
+// 月ごとにlocal strage上に蓄積されたデータを解析する関数を定義する
+function analyzeMemos() {
+    const memos = localStorage.getItem("memo");
+    if (!memos) return {}; 
+// if(!memos)～の部分は「もしmemosに何も入っていなかったらreturnで空の値を返す」という処理
+// if(memos==""){return {}}と同じ意味
+
+    const lines = memos.split("\n");
+    // \n＝改行、split("引数")=分割するの意味なので、memosに書かれた文字列を改行ごとに分割したものをlinesに入れなおしている
+    const monthlyRecords = {};
+    
+    lines.forEach(line => {
+    //linesに入っている一つの行であるlineに繰り返し下記の処理を行う 
+        const date = new Date(line.split(" ")[0]); // 日付部分を取得。Dateクラスをinstance化してdateに入れる(lineの０番目の項目(=何年何月何日を取得して入れる))
+        const monthKey = date.getFullYear() + "-" + (date.getMonth() + 1);
+    // new Date()と一緒に使用することで、new Dateで取得した日付を自動的に入れなおしてくれる関数＝getFullYear / getMonth
+        if (monthlyRecords[monthKey]) {
+            monthlyRecords[monthKey].push(line);
+        } else {
+            monthlyRecords[monthKey] = [line];
+        }
+    });
+// 一つの変数の中に何個も入れられるのが配列→if(条件式(正負の判断)){正だったら～}else{負だったら～}のmothlyRecordsの中にmonthKeyの値が何かしら入っていたら、～
+// monthlyRecordsにmonthKeyが入っていない一番最初の回のみ、66行目に記載されているlineの値をmonthlyRecordsに入れる
+    return monthlyRecords;
+}
+
+// 結果をHTML上に表示されるようにする
+function displayMonthlyRecords() {
+    const monthlyRecords = analyzeMemos();
+
+    let html = "<h3>月ごとの記録状況</h3>";
+    for (const month in monthlyRecords) {
+        // monthlyRecords(配列)の中の一つひとつの要素を取り出してmonthという一つの変数に置きなおし、それに対して下記の処理を繰り返し行う
+        html += `<h3>${month}</h3>`;
+        html += "<ul>";
+        monthlyRecords[month].forEach(record => {
+            html += `<li>${record}</li>`;
+        });
+        html += "</ul>";
+    }
+
+    $("#monthlyRecords").html(html);
+}
+
+$(document).ready(function() {
+    $("main").fadeIn(1000);
+    displayMonthlyRecords();
+});
+
+//きろく クリックイベント
+$("#save").on("click", function() {
+    const v = $("#text_area").val();
+
+    // selectタグで選択された年、月、日を取得
+    const year = $("#view").val();
+    const month = $("#view2").val();
+    const day = $("#view3").val();
+
+    // 日時情報を作成
+    const dateString = year + "-" + month + "-" + day;
+
+    // 日時情報とメモを結合
+    const entry = dateString + " " + v;
+
+    let existingMemos = localStorage.getItem("memo");
+
+    if (existingMemos) {
+        existingMemos += "\n" + entry;
+    } else {
+        existingMemos = entry;
+    }
+
+    localStorage.setItem("memo", existingMemos);
+    alert("保存しました");
+    displayMonthlyRecords();
+});
+
+//clear クリックイベント
+$("#clear").on("click",function(){
+    localStorage.removeItem("memo"); 
+    alert("削除しました");
+    // 同時にtext boxに入った文字を空にするためにval("")を記載
+    $("#text_area").val("")
+})
+
+</script>
+<footer><small>食べ活ちゃん</small></footer>
+</body>
+</html>
+
+
+<!-- 参考記事 -->
+<!-- https://office54.net/iot/javascript/local-storage-browser -->
+<!-- 今後実施するべきGPTとの付き合い方：自分が作りたいWebアプリの機能を列挙する→それを実現するために必要なコードの種類、どのような手順を踏めばよいのかをGPTに尋ねてロジックを学ぶ→わからない部分を追加で質問していく -->
